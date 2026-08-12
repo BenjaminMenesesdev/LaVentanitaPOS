@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+.npm/
+.pnpm-store/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# PHP / Laravel service folders
+services/**/vendor/
+services/**/storage/logs/
+services/**/storage/framework/cache/
+services/**/storage/framework/sessions/
+services/**/storage/framework/views/
+services/**/bootstrap/cache/
+services/**/.phpunit.result.cache
+
+# Docker / local runtime artifacts
+*.pid
+*.sock
+
+docker-compose.override.yml
+
+# Terraform local state (optional, usually keep if you want to version tf files but not local state)
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/crash.log
+terraform/.terraform.lock.hcl
+
+# Optional: if you want to ignore generated coverage output
+coverage/
+
+# Optional: if you use PHPUnit or other test coverage
+.phpunit.cache/

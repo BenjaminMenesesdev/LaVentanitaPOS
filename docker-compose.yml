@@ -1,0 +1,256 @@
+services:
+  # API Gateway (Nginx)
+  gateway:
+    image: nginx:alpine
+    container_name: ventanita-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/dist:/usr/share/nginx/html/frontend
+    depends_on:
+      bff:
+        condition: service_healthy
+    networks:
+      - ventanita-network
+
+  # Base de datos para Auth
+  auth-db:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ventanita-network
+
+  # Base de datos para Products
+  products-db:
+    image: postgres:15
+    container_name: products-db
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: products_user
+      POSTGRES_PASSWORD: products_pass
+    volumes:
+      - products-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U products_user -d products_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ventanita-network
+
+  # Base de datos para Sales
+  sales-db:
+    image: postgres:15
+    container_name: sales-db
+    environment:
+      POSTGRES_DB: sales_db
+      POSTGRES_USER: sales_user
+      POSTGRES_PASSWORD: sales_pass
+    volumes:
+      - sales-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sales_user -d sales_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ventanita-network
+
+  # Base de datos para Inventory
+  inventory-db:
+    image: postgres:15
+    container_name: inventory-db
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_pass
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ventanita-network
+
+  # Microservicio Auth
+  auth:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=auth-db
+      - DB_PORT=5432
+      - DB_DATABASE=auth_db
+      - DB_USERNAME=auth_user
+      - DB_PASSWORD=auth_pass
+      - JWT_SECRET=${JWT_SECRET}
+      - APP_KEY=${AUTH_APP_KEY}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: ["/bin/sh", "-c", "php artisan migrate --force && php artisan db:seed --force && php artisan serve --host=0.0.0.0 --port=8000"]
+    networks:
+      - ventanita-network
+
+  # Microservicio Products
+  products:
+    build:
+      context: ./services/products
+      dockerfile: Dockerfile
+    container_name: products-service
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=products-db
+      - DB_PORT=5432
+      - DB_DATABASE=products_db
+      - DB_USERNAME=products_user
+      - DB_PASSWORD=products_pass
+      - APP_KEY=${PRODUCTS_APP_KEY}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    depends_on:
+      products-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: ["/bin/sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+    networks:
+      - ventanita-network
+
+  # Microservicio Inventory
+  inventory:
+    build:
+      context: ./services/inventory
+      dockerfile: Dockerfile
+    container_name: inventory-service
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=inventory-db
+      - DB_PORT=5432
+      - DB_DATABASE=inventory_db
+      - DB_USERNAME=inventory_user
+      - DB_PASSWORD=inventory_pass
+      - APP_KEY=${INVENTORY_APP_KEY}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: ["/bin/sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+    networks:
+      - ventanita-network
+
+  # Microservicio Sales
+  sales:
+    build:
+      context: ./services/sales
+      dockerfile: Dockerfile
+    container_name: sales-service
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_CONNECTION=pgsql
+      - DB_HOST=sales-db
+      - DB_PORT=5432
+      - DB_DATABASE=sales_db
+      - DB_USERNAME=sales_user
+      - DB_PASSWORD=sales_pass
+      - APP_KEY=${SALES_APP_KEY}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - INVENTORY_SERVICE_URL=http://inventory:8000/api
+      - AUTH_SERVICE_URL=http://auth:8000/api
+    depends_on:
+      sales-db:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: ["/bin/sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+    networks:
+      - ventanita-network
+
+  # BFF (Backend for Frontend)
+  bff:
+    build:
+      context: ./services/bff
+      dockerfile: Dockerfile
+    container_name: bff-service
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_KEY=${BFF_APP_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - AUTH_SERVICE_URL=http://auth:8000/api
+      - PRODUCTS_SERVICE_URL=http://products:8000/api
+      - SALES_SERVICE_URL=http://sales:8000/api
+      - INVENTORY_SERVICE_URL=http://inventory:8000/api
+      - FRONTEND_URL=${FRONTEND_URL}
+    depends_on:
+      auth:
+        condition: service_healthy
+      products:
+        condition: service_healthy
+      sales:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    entrypoint: ["/bin/sh", "-c", "php artisan serve --host=0.0.0.0 --port=8000"]
+    networks:
+      - ventanita-network
+
+volumes:
+  auth-db-data:
+  products-db-data:
+  sales-db-data:
+  inventory-db-data:
+
+networks:
+  ventanita-network:
+    driver: bridge

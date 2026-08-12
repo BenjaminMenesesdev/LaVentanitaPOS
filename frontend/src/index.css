@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: #eaf6fb;
+  color: #16232f;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Signature: scalloped edge, a nod to the tiled awning over La Ventanita's real storefront */
+.scallop {
+  height: 9px;
+  background-image: radial-gradient(circle at 8px 0px, #3d6494 8px, transparent 8.5px);
+  background-size: 16px 9px;
+  background-repeat: repeat-x;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+::selection {
+  background-color: #c6def6;
+}
