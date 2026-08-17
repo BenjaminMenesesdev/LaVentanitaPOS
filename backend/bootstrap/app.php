@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Middleware\CheckPlanFeature;
+use App\Http\Middleware\CheckPlanLimit;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
+            'tenant' => ResolveTenant::class,
+            'plan.feature' => CheckPlanFeature::class,
+            'plan.limit' => CheckPlanLimit::class,
         ]);
 
         $middleware->throttleApi();

@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Sale extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $fillable = [
-        'user_id', 'gross_total', 'commission_amount', 'net_total', 'cost_total',
+        'tenant_id', 'user_id', 'gross_total', 'commission_amount', 'net_total', 'cost_total',
         'payment_method', 'status', 'voided_by', 'void_reason',
     ];
 

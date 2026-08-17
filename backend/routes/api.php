@@ -3,26 +3,34 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\InvoiceScanController;
+use App\Http\Controllers\Api\PlanController;
+use App\Http\Controllers\Api\PriceSuggestionController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductRotationController;
 use App\Http\Controllers\Api\PurchaseSuggestionController;
 use App\Http\Controllers\Api\RecipeController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\ShiftClosureController;
 use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\TenantController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/plans', [PlanController::class, 'index']);
+Route::post('/tenants/register', [TenantController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/tenant/current', [TenantController::class, 'current']);
 
     Route::get('/dashboard/today', [DashboardController::class, 'today']);
     Route::get('/dashboard/product-ranking', [DashboardController::class, 'productRanking'])->middleware('role:admin');
 
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/barcode/{barcode}', [ProductController::class, 'findByBarcode']);
-    Route::post('/products', [ProductController::class, 'store'])->middleware('role:admin');
+    Route::post('/products', [ProductController::class, 'store'])->middleware(['role:admin', 'plan.limit:products']);
     Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('role:admin');
 
     Route::get('/products/{product}/recipe', [RecipeController::class, 'show']);
@@ -43,6 +51,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::post('/suppliers', [SupplierController::class, 'store']);
         Route::get('/purchase-suggestions', [PurchaseSuggestionController::class, 'index']);
-        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/register', [AuthController::class, 'register'])->middleware('plan.limit:users');
+    });
+
+    Route::middleware(['role:admin', 'plan.feature:invoice_scan'])->group(function () {
+        Route::get('/invoice-scans', [InvoiceScanController::class, 'index']);
+        Route::post('/invoice-scans', [InvoiceScanController::class, 'store']);
+        Route::post('/invoice-scans/{scan}/apply', [InvoiceScanController::class, 'applyExtractedData']);
+    });
+
+    Route::middleware(['role:admin', 'plan.feature:ai_suggestions'])->group(function () {
+        Route::get('/price-suggestions', [PriceSuggestionController::class, 'index']);
+        Route::post('/price-suggestions/generate', [PriceSuggestionController::class, 'generate']);
+        Route::post('/price-suggestions/{suggestion}/apply', [PriceSuggestionController::class, 'apply']);
+        Route::post('/price-suggestions/{suggestion}/discard', [PriceSuggestionController::class, 'discard']);
+        Route::get('/products/stale', [ProductRotationController::class, 'staleProducts']);
     });
 });

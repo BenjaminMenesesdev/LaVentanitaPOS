@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Ingredient extends Model
 {
-    use HasFactory;
+    use BelongsToTenant, HasFactory;
 
     protected $fillable = [
-        'name', 'base_unit', 'supplier_id',
+        'tenant_id', 'name', 'base_unit', 'supplier_id',
         'current_cost_per_base_unit', 'min_stock_threshold', 'shelf_life_days',
     ];
 
