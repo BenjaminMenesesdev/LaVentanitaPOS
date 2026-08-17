@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\Ingredient;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\RecipeItem;
 use App\Models\Supplier;
+use App\Models\Tenant;
 use App\Models\UnitConversion;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -14,7 +16,21 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
+        $this->call(PlanSeeder::class);
+
+        $iaPlan = Plan::where('code', 'ia')->first();
+
+        $tenant = Tenant::create([
+            'name' => 'La Ventanita',
+            'slug' => 'la-ventanita',
+            'plan_id' => $iaPlan->id,
+            'billing_cycle' => 'monthly',
+            'status' => 'active',
+            'current_period_ends_at' => now()->addMonth(),
+        ]);
+
+        $admin = User::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Administrador',
             'email' => 'admin@laventanita.cl',
             'password' => 'CambiarInmediatamente123!',
@@ -22,6 +38,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Cajero Demo',
             'email' => 'cajero@laventanita.cl',
             'password' => 'CambiarInmediatamente123!',
@@ -36,6 +53,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $mondoGelato = Supplier::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Mondo Gelato',
             'avg_lead_time_days' => 2,
             'no_delivery_days' => [0],
@@ -43,6 +61,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $heladoArtesanal = Ingredient::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Helado',
             'base_unit' => 'ml',
             'supplier_id' => $mondoGelato->id,
@@ -51,6 +70,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $barquillo = Ingredient::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Barquillo',
             'base_unit' => 'unidad',
             'current_cost_per_base_unit' => 120,
@@ -58,6 +78,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $product = Product::create([
+            'tenant_id' => $tenant->id,
             'name' => 'Helado Doble en Cono',
             'sale_price' => 2500,
             'is_composite' => true,
