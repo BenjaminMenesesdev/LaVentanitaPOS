@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\UnitConversion;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -29,11 +30,14 @@ class DatabaseSeeder extends Seeder
             'current_period_ends_at' => now()->addMonth(),
         ]);
 
+        $adminPassword = Str::password(20);
+        $cajeroPassword = Str::password(20);
+
         $admin = User::create([
             'tenant_id' => $tenant->id,
             'name' => 'Administrador',
             'email' => 'admin@laventanita.cl',
-            'password' => 'CambiarInmediatamente123!',
+            'password' => $adminPassword,
             'role' => 'admin',
         ]);
 
@@ -41,9 +45,17 @@ class DatabaseSeeder extends Seeder
             'tenant_id' => $tenant->id,
             'name' => 'Cajero Demo',
             'email' => 'cajero@laventanita.cl',
-            'password' => 'CambiarInmediatamente123!',
+            'password' => $cajeroPassword,
             'role' => 'cajero',
         ]);
+
+        if (app()->runningInConsole()) {
+            fwrite(STDOUT, "\n==================================================\n");
+            fwrite(STDOUT, "CREDENCIALES GENERADAS (copialas ahora, no se vuelven a mostrar):\n");
+            fwrite(STDOUT, "  admin@laventanita.cl   / {$adminPassword}\n");
+            fwrite(STDOUT, "  cajero@laventanita.cl  / {$cajeroPassword}\n");
+            fwrite(STDOUT, "==================================================\n\n");
+        }
 
         UnitConversion::insert([
             ['unit_name' => 'bacha_18L', 'base_unit' => 'ml', 'factor_to_base' => 18000, 'created_at' => now(), 'updated_at' => now()],
