@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class InvoiceScan extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
         'tenant_id', 'supplier_id', 'uploaded_by', 'file_path',
         'status', 'extracted_data', 'total_amount', 'error_message', 'processed_at',

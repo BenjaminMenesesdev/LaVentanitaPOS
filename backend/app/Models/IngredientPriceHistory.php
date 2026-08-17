@@ -2,21 +2,26 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class IngredientPriceHistory extends Model
 {
-    public $timestamps = false;
+    use BelongsToTenant;
 
-    protected $fillable = ['ingredient_id', 'cost_per_base_unit', 'changed_by', 'effective_at'];
+    protected $fillable = ['tenant_id', 'ingredient_id', 'cost_per_base_unit', 'changed_by'];
 
     protected $casts = [
         'cost_per_base_unit' => 'decimal:6',
-        'effective_at' => 'datetime',
     ];
 
     public function ingredient()
     {
         return $this->belongsTo(Ingredient::class);
+    }
+
+    public function changedBy()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
     }
 }
