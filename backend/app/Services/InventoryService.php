@@ -91,6 +91,46 @@ class InventoryService
         }
     }
 
+    public function restoreForVoidedSale(int $saleId, int $userId): void
+    {
+        $movements = StockMovement::where('sale_id', $saleId)
+            ->where('reason', 'venta')
+            ->get();
+
+        if ($movements->isEmpty()) {
+            return;
+        }
+
+        foreach ($movements as $movement) {
+            $stock = Stock::where('ingredient_id', $movement->ingredient_id)
+                ->where('location', $movement->location)
+                ->lockForUpdate()
+                ->first();
+
+            $quantityToRestore = abs((float) $movement->quantity_delta_base_unit);
+
+            if (!$stock) {
+                $stock = Stock::create([
+                    'ingredient_id' => $movement->ingredient_id,
+                    'location' => $movement->location,
+                    'quantity_base_unit' => 0,
+                ]);
+            }
+
+            $stock->increment('quantity_base_unit', $quantityToRestore);
+
+            StockMovement::create([
+                'ingredient_id' => $movement->ingredient_id,
+                'location' => $movement->location,
+                'quantity_delta_base_unit' => $quantityToRestore,
+                'reason' => 'ajuste_manual',
+                'justification' => "Reversion automatica por anulacion de venta #{$saleId}",
+                'user_id' => $userId,
+                'sale_id' => $saleId,
+            ]);
+        }
+    }
+
     public function criticalStockAlerts()
     {
         return Ingredient::all()->filter(fn ($ingredient) => $ingredient->isBelowThreshold())->values();

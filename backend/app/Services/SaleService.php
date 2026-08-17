@@ -92,6 +92,8 @@ class SaleService
                 throw new RuntimeException('La venta ya se encuentra anulada.');
             }
 
+            $this->inventoryService->restoreForVoidedSale($saleId, $voidedBy);
+
             $sale->update([
                 'status' => 'anulada',
                 'voided_by' => $voidedBy,
