@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class ShiftClosure extends Model
 {
-    protected $fillable = ['user_id', 'shift_date', 'expected_cash', 'counted_cash', 'difference', 'justification'];
+    use BelongsToTenant;
+
+    protected $fillable = ['tenant_id', 'user_id', 'shift_date', 'expected_cash', 'counted_cash', 'difference', 'justification'];
 
     protected $casts = [
         'shift_date' => 'date',

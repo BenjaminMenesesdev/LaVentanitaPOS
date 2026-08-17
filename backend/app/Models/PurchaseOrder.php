@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class PurchaseOrder extends Model
 {
-    protected $fillable = ['supplier_id', 'created_by', 'status', 'total_amount', 'invoice_path', 'received_at'];
+    use BelongsToTenant;
+
+    protected $fillable = ['tenant_id', 'supplier_id', 'created_by', 'status', 'total_amount', 'invoice_path', 'received_at'];
 
     protected $casts = [
         'total_amount' => 'decimal:2',

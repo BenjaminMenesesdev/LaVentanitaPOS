@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class StockMovement extends Model
 {
+    use BelongsToTenant;
+
     protected $fillable = [
-        'ingredient_id', 'location', 'quantity_delta_base_unit',
+        'tenant_id', 'ingredient_id', 'location', 'quantity_delta_base_unit',
         'reason', 'justification', 'user_id', 'sale_id',
     ];
 
