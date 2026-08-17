@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use App\Services\InventoryService;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -45,10 +46,14 @@ class DashboardController extends Controller
 
     public function productRanking()
     {
+        $tenantId = App::make('currentTenantId');
+
         $ranking = DB::table('sale_items')
             ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
             ->join('products', 'products.id', '=', 'sale_items.product_id')
             ->where('sales.status', 'completada')
+            ->where('sales.tenant_id', $tenantId)
+            ->where('products.tenant_id', $tenantId)
             ->select('products.name')
             ->selectRaw('SUM(sale_items.quantity) as total_quantity')
             ->selectRaw('SUM(sale_items.quantity * sale_items.unit_price) as total_revenue')
