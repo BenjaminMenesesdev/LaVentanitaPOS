@@ -68,6 +68,7 @@ class SaleService
                     'quantity' => $item['quantity'],
                     'unit_price' => $product->sale_price,
                     'unit_cost' => $product->currentRecipeCost(),
+                    'flavors' => $item['flavors'] ?? null,
                 ]);
             }
 

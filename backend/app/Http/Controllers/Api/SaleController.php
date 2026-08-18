@@ -32,7 +32,7 @@ class SaleController extends Controller
         try {
             $sale = $this->saleService->registerSale(
                 $request->items,
-                $request->payment_method,
+                $request->resolvedPaymentMethod(),
                 $request->user()->id
             );
         } catch (RuntimeException $e) {

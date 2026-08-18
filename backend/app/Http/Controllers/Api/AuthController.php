@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterUserRequest;
+use App\Models\RefreshToken;
 use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
@@ -40,16 +41,27 @@ class AuthController extends Controller
 
         $user->forceFill(['last_login_at' => now()])->save();
 
-        $abilities = $user->role === 'admin' ? ['*'] : ['pos:operate', 'stock:read'];
-        $token = $user->createToken('auth_token', $abilities, now()->addHours(12));
-
         AuditService::log('auth.login', 'User', $user->id);
 
-        return response()->json([
-            'token' => $token->plainTextToken,
-            'expires_at' => $token->accessToken->expires_at,
-            'user' => $user->only(['id', 'name', 'email', 'role']),
+        return response()->json($this->issueTokenPair($user));
+    }
+
+    public function refresh(Request $request)
+    {
+        $validated = $request->validate([
+            'refresh_token' => ['required', 'string'],
         ]);
+
+        $stored = RefreshToken::where('token', $validated['refresh_token'])->first();
+
+        if (!$stored || !$stored->isValid()) {
+            return response()->json(['message' => 'Refresh token inválido o expirado.'], 401);
+        }
+
+        $user = $stored->user;
+        $stored->update(['revoked_at' => now()]);
+
+        return response()->json($this->issueTokenPair($user));
     }
 
     public function register(RegisterUserRequest $request)
@@ -69,8 +81,29 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
+        RefreshToken::where('user_id', $request->user()->id)->update(['revoked_at' => now()]);
         AuditService::log('auth.logout', 'User', $request->user()->id);
 
         return response()->json(['message' => 'Sesión cerrada.']);
+    }
+
+    private function issueTokenPair(User $user): array
+    {
+        $abilities = $user->role === 'admin' ? ['*'] : ['pos:operate', 'stock:read'];
+        $accessToken = $user->createToken('auth_token', $abilities, now()->addHours(12));
+
+        $refreshTokenValue = Str::random(80);
+        RefreshToken::create([
+            'user_id' => $user->id,
+            'token' => $refreshTokenValue,
+            'expires_at' => now()->addDays(30),
+        ]);
+
+        return [
+            'access_token' => $accessToken->plainTextToken,
+            'refresh_token' => $refreshTokenValue,
+            'expires_at' => $accessToken->accessToken->expires_at,
+            'user' => $user->only(['id', 'name', 'email', 'role']),
+        ];
     }
 }

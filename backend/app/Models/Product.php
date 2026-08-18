@@ -11,12 +11,16 @@ class Product extends Model
 {
     use BelongsToTenant, HasFactory, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'barcode', 'sku', 'sale_price', 'is_active', 'is_composite'];
+    protected $fillable = [
+        'tenant_id', 'name', 'barcode', 'sku', 'sale_price', 'is_active',
+        'is_composite', 'category_id', 'needs_flavor',
+    ];
 
     protected $casts = [
         'sale_price' => 'decimal:2',
         'is_active' => 'boolean',
         'is_composite' => 'boolean',
+        'needs_flavor' => 'boolean',
     ];
 
     public function recipeItems()

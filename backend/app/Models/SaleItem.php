@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class SaleItem extends Model
 {
-    protected $fillable = ['sale_id', 'product_id', 'quantity', 'unit_price', 'unit_cost'];
+    protected $fillable = ['sale_id', 'product_id', 'quantity', 'unit_price', 'unit_cost', 'flavors'];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'unit_cost' => 'decimal:4',
+        'flavors' => 'array',
     ];
 
     public function product()

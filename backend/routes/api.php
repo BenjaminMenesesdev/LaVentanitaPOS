@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/plans', [PlanController::class, 'index']);
 Route::post('/tenants/register', [TenantController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('throttle:20,1');
 
 Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -26,6 +27,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/tenant/current', [TenantController::class, 'current']);
 
     Route::get('/dashboard/today', [DashboardController::class, 'today']);
+    Route::get('/dashboard', [DashboardController::class, 'today']);
     Route::get('/dashboard/product-ranking', [DashboardController::class, 'productRanking'])->middleware('role:admin');
 
     Route::get('/products', [ProductController::class, 'index']);
@@ -38,6 +40,7 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
     Route::get('/stock', [InventoryController::class, 'index']);
     Route::get('/stock/alerts', [InventoryController::class, 'alerts']);
+    Route::get('/inventory/alerts', [InventoryController::class, 'alerts']);
     Route::post('/stock/adjust', [InventoryController::class, 'adjust']);
     Route::post('/units/convert', [InventoryController::class, 'convertUnits']);
 
