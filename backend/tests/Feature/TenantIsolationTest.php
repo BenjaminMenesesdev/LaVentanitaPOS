@@ -186,4 +186,35 @@ class TenantIsolationTest extends TestCase
 
         $this->assertFalse($names->contains('Producto B'), 'El ranking de Tenant A no debe incluir productos de Tenant B.');
     }
+
+    public function test_admin_de_tenant_a_no_puede_listar_usuarios_de_tenant_b_via_endpoint(): void
+    {
+        // Regresion cubierta: User.php perdio temporalmente BelongsToTenant en el PR de roles
+        // (admin/operador/auditoria), lo que habria expuesto GET /users de forma cross-tenant.
+        $this->actingAsTenant($this->adminA);
+
+        $response = $this->getJson('/api/users');
+
+        $response->assertOk();
+        $emails = collect($response->json())->pluck('email');
+
+        $this->assertTrue($emails->contains('admin-a@test.local'), 'Tenant A debe ver su propio usuario admin.');
+        $this->assertFalse($emails->contains('admin-b@test.local'), 'Tenant A NO debe ver el usuario admin de Tenant B.');
+        $this->assertSame(1, User::count(), 'El conteo de usuarios visible para Tenant A debe excluir a Tenant B.');
+    }
+
+    public function test_admin_de_tenant_a_no_puede_leer_ni_editar_usuario_de_tenant_b_por_id(): void
+    {
+        $this->actingAsTenant($this->adminA);
+
+        // IDOR: intentar leer/editar un usuario de otro tenant por su ID debe fallar (404),
+        // no devolver 403 con datos filtrados ni permitir la edicion.
+        $show = $this->getJson("/api/users/{$this->adminB->id}");
+        $show->assertNotFound();
+
+        $update = $this->putJson("/api/users/{$this->adminB->id}", ['name' => 'Nombre Hackeado']);
+        $update->assertNotFound();
+
+        $this->assertSame('Admin B', $this->adminB->fresh()->name, 'El usuario de Tenant B no debe haber sido modificado.');
+    }
 }

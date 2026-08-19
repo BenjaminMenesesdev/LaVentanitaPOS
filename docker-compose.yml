@@ -41,15 +41,21 @@ services:
         condition: service_healthy
     expose: ["9000"]
     networks: [ventanita-network]
+    # Corre migraciones y seeders antes de arrancar php-fpm. El Dockerfile original
+    # no tenia ningun paso que migrara la base, por lo que el backend levantaba sin tablas.
+    # migrate:fresh es seguro aqui porque este compose es para uso LOCAL (sin datos reales
+    # que resguardar). Si se usa contra una base con datos reales, cambiar a "migrate --force".
+    entrypoint: ["/bin/sh", "-c", "php artisan migrate:fresh --seed --force && php-fpm"]
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # Vite necesita esto en tiempo de build, no de runtime (ver frontend/Dockerfile).
+        VITE_API_URL: /api
     container_name: laventanita-frontend
     restart: unless-stopped
-    environment:
-      - VITE_API_URL=/api
     expose: ["80"]
     depends_on: [backend]
     networks: [ventanita-network]

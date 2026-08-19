@@ -15,9 +15,21 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * Abilities de Sanctum por rol de negocio.
+     * admin/super_admin: acceso total. operador: POS + lectura/compra de stock.
+     * auditoria: solo lectura de dashboard/stock (sin operar POS ni ajustar inventario).
+     */
+    private const ROLE_ABILITIES = [
+        'admin' => ['*'],
+        'super_admin' => ['*'],
+        'operador' => ['pos:operate', 'stock:read', 'stock:purchase'],
+        'auditoria' => ['dashboard:read', 'stock:read'],
+    ];
+
     public function login(LoginRequest $request)
     {
-        $throttleKey = Str::lower($request->email).'|'.$request->ip();
+        $throttleKey = Str::lower($request->email) . '|' . $request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
@@ -89,7 +101,7 @@ class AuthController extends Controller
 
     private function issueTokenPair(User $user): array
     {
-        $abilities = $user->role === 'admin' ? ['*'] : ['pos:operate', 'stock:read'];
+        $abilities = self::ROLE_ABILITIES[$user->role] ?? ['stock:read'];
         $accessToken = $user->createToken('auth_token', $abilities, now()->addHours(12));
 
         $refreshTokenValue = Str::random(80);

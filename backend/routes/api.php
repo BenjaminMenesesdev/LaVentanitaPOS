@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\ShiftClosureController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\TenantController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/plans', [PlanController::class, 'index']);
@@ -26,8 +27,11 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/tenant/current', [TenantController::class, 'current']);
 
-    Route::get('/dashboard/today', [DashboardController::class, 'today']);
-    Route::get('/dashboard', [DashboardController::class, 'today']);
+    // Dashboard: lectura para admin y auditoria. El operador no tiene acceso (ver roles.js del frontend).
+    Route::middleware('role:admin,auditoria')->group(function () {
+        Route::get('/dashboard/today', [DashboardController::class, 'today']);
+        Route::get('/dashboard', [DashboardController::class, 'today']);
+    });
     Route::get('/dashboard/product-ranking', [DashboardController::class, 'productRanking'])->middleware('role:admin');
 
     Route::get('/products', [ProductController::class, 'index']);
@@ -38,19 +42,35 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
     Route::get('/products/{product}/recipe', [RecipeController::class, 'show']);
     Route::post('/products/{product}/recipe', [RecipeController::class, 'store'])->middleware('role:admin');
 
+    // Inventario: lectura abierta a todos los autenticados (admin/operador/auditoria).
     Route::get('/stock', [InventoryController::class, 'index']);
     Route::get('/stock/alerts', [InventoryController::class, 'alerts']);
     Route::get('/inventory/alerts', [InventoryController::class, 'alerts']);
-    Route::post('/stock/adjust', [InventoryController::class, 'adjust']);
+
+    // Ajustes de stock (compra/traslado/merma): admin y operador.
+    // InventoryController::adjust debe seguir validando internamente que el operador
+    // solo pueda enviar type=purchase (traslado/merma quedan reservados a admin).
+    Route::post('/stock/adjust', [InventoryController::class, 'adjust'])->middleware('role:admin,operador');
     Route::post('/units/convert', [InventoryController::class, 'convertUnits']);
 
+    // Aviso de stock bajo a administracion (correo/WhatsApp) - operador y admin.
+    Route::post('/inventory/{stock}/notify-low-stock', [InventoryController::class, 'notifyLowStock'])
+        ->middleware('role:admin,operador');
+
     Route::get('/sales', [SaleController::class, 'index']);
-    Route::post('/sales', [SaleController::class, 'store']);
+    Route::post('/sales', [SaleController::class, 'store'])->middleware('role:admin,operador');
     Route::post('/sales/{sale}/void', [SaleController::class, 'void'])->middleware('role:admin');
 
     Route::post('/shift-closures', [ShiftClosureController::class, 'store']);
 
+    // Usuarios: CRUD exclusivo de Administracion.
     Route::middleware('role:admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/{user}', [UserController::class, 'show']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
+
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::post('/suppliers', [SupplierController::class, 'store']);
         Route::get('/purchase-suggestions', [PurchaseSuggestionController::class, 'index']);
