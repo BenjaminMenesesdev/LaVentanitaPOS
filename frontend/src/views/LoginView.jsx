@@ -5,24 +5,24 @@ import { login as loginRequest } from "../services/api.js";
 
 export default function LoginView() {
   const { login } = useAppDispatch();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!username || !password) {
-      setError("Ingresa usuario y contraseña.");
+    if (!email || !password) {
+      setError("Ingresa correo y contraseña.");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      const response = await loginRequest({ username, password });
+      const response = await loginRequest({ email, password });
       login(response.user, { access_token: response.access_token, refresh_token: response.refresh_token });
     } catch (err) {
-      setError(err.response?.data?.message || "Usuario o contraseña incorrectos.");
+      setError(err.response?.data?.message || "Correo o contraseña incorrectos.");
     } finally {
       setLoading(false);
     }
@@ -53,13 +53,13 @@ export default function LoginView() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-12px font-medium text-ink">Usuario</label>
+              <label className="text-12px font-medium text-ink">Correo electrónico</label>
               <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full mt-1 px-3 py-2.5 rounded-lg border border-border bg-canvas text-13px focus:outline-none focus:ring-2 focus:ring-primary/40"
-                placeholder="usuario"
+                placeholder="usuario@laventanita.cl"
                 autoFocus
               />
             </div>
