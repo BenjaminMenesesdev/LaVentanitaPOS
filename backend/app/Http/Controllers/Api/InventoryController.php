@@ -14,11 +14,14 @@ use RuntimeException;
 class InventoryController extends Controller
 {
     /**
-     * Motivos de ajuste que un operador puede registrar. Todo lo que no este en
-     * esta lista (traslado bodega->vitrina, mermas, vencimientos, etc.) queda
-     * reservado a admin, aunque la ruta ya permita el rol "operador" via middleware.
+     * Motivos de ajuste que un operador puede registrar. Segun AdjustStockRequest,
+     * los valores validos de "reason" son:
+     * merma, vencimiento, derretimiento, rotura, consumo_personal, recepcion, traslado, ajuste_manual.
+     * El unico que corresponde a una "compra" (ingreso de mercaderia a bodega) es "recepcion".
+     * Todo lo demas (merma, traslado, vencimiento, derretimiento, rotura, consumo_personal,
+     * ajuste_manual) queda reservado a admin.
      */
-    private const OPERADOR_ALLOWED_REASONS = ['compra', 'purchase'];
+    private const OPERADOR_ALLOWED_REASONS = ['recepcion'];
 
     public function __construct(
         private InventoryService $inventoryService,
@@ -43,15 +46,17 @@ class InventoryController extends Controller
     {
         $user = $request->user();
 
-        // Un operador solo puede registrar compras (entradas de stock con reason=compra).
+        // Un operador solo puede registrar recepcion (ingreso de stock por compra).
         // Traslados, mermas y cualquier otro motivo quedan reservados a admin.
+        // AdjustStockRequest::authorize() no restringe por rol, por lo que este
+        // control debe vivir aqui.
         if ($user->isOperador()) {
-            $isPurchase = in_array($request->reason, self::OPERADOR_ALLOWED_REASONS, true);
+            $isAllowedReason = in_array($request->reason, self::OPERADOR_ALLOWED_REASONS, true);
             $isInboundQty = $request->quantity_delta > 0;
 
-            if (!$isPurchase || !$isInboundQty) {
+            if (!$isAllowedReason || !$isInboundQty) {
                 return response()->json([
-                    'message' => 'Como operador solo puedes registrar compras (ingreso de stock). Traslados y mermas los gestiona Administración.',
+                    'message' => 'Como operador solo puedes registrar compras (recepcion de stock). Traslados y mermas los gestiona Administración.',
                 ], 403);
             }
         }
