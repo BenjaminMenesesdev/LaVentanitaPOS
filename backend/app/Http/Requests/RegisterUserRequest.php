@@ -17,7 +17,7 @@ class RegisterUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'role' => ['required', 'in:admin,cajero'],
+            'role' => ['required', 'in:admin,operador,auditoria'],
         ];
     }
 }
