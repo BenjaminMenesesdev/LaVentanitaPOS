@@ -1,174 +1,134 @@
-import { useEffect, useState } from 'react'
-import { inventoryService } from '../services/inventoryService'
-import AlertBanner from '../components/AlertBanner.jsx'
-import { formatDateTime } from '../utils.js'
-
-const REASONS = [
-  'merma', 'vencimiento', 'derretimiento', 'rotura',
-  'consumo_personal', 'recepcion', 'traslado', 'ajuste_manual',
-]
+import { useMemo, useState } from "react";
+import { AlertTriangle, ChevronRight, Search } from "lucide-react";
+import { useAppState } from "../context/AppContext.jsx";
+import { INVENTORY_CATEGORIES } from "../data/data.js";
+import { formatQty, stockStatus, expiryStatus, getStockAlerts } from "../utils.js";
+import Badge from "../components/ui/Badge.jsx";
+import ItemDetailModal from "./inventory/ItemDetailModal.jsx";
+import { permissionsFor } from "../roles.js";
 
 export default function InventoryView() {
-  const [stocks, setStocks] = useState([])
-  const [alerts, setAlerts] = useState({ critical_stock: [], expiring_soon: [] })
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [form, setForm] = useState({
-    ingredient_id: '', location: 'bodega', quantity_delta: '', unit: 'unidad', reason: 'recepcion', justification: '',
-  })
+  const { stock, user } = useAppState();
+  const perms = permissionsFor(user?.role);
+  const [category, setCategory] = useState("helados");
+  const [search, setSearch] = useState("");
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [detailId, setDetailId] = useState(null);
 
-  useEffect(() => {
-    load()
-  }, [])
-
-  async function load() {
-    try {
-      const [stockData, alertData] = await Promise.all([
-        inventoryService.list(),
-        inventoryService.alerts(),
-      ])
-      setStocks(stockData)
-      setAlerts(alertData)
-    } catch (err) {
-      setError('No se pudo cargar el inventario.')
-    }
-  }
-
-  async function handleAdjust(e) {
-    e.preventDefault()
-    setError('')
-    try {
-      await inventoryService.adjust({
-        ...form,
-        ingredient_id: Number(form.ingredient_id),
-        quantity_delta: Number(form.quantity_delta),
-      })
-      setSuccess('Ajuste registrado.')
-      setForm({ ...form, quantity_delta: '', justification: '' })
-      load()
-      setTimeout(() => setSuccess(''), 2000)
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al ajustar stock.')
-    }
-  }
+  const alerts = getStockAlerts(stock);
+  const filtered = useMemo(
+    () => stock.filter((item) => item.category === category && item.name.toLowerCase().includes(search.toLowerCase())),
+    [stock, category, search]
+  );
 
   return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold">Inventario</h1>
-      <AlertBanner type="error" message={error} onClose={() => setError('')} />
-      <AlertBanner type="success" message={success} onClose={() => setSuccess('')} />
-
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-2 font-semibold text-amber-600">Stock critico</h2>
-          {alerts.critical_stock.length === 0 && <p className="text-sm text-gray-400">Sin alertas.</p>}
-          <ul className="space-y-1 text-sm">
-            {alerts.critical_stock.map((ing) => (
-              <li key={ing.id} className="flex justify-between">
-                <span>{ing.name}</span>
-                <span className="font-medium text-amber-600">Bajo minimo</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-2 font-semibold text-red-600">Proximos a vencer</h2>
-          {alerts.expiring_soon.length === 0 && <p className="text-sm text-gray-400">Sin alertas.</p>}
-          <ul className="space-y-1 text-sm">
-            {alerts.expiring_soon.map((s) => (
-              <li key={s.id} className="flex justify-between">
-                <span>{s.ingredient?.name}</span>
-                <span className="font-medium text-red-600">{formatDateTime(s.expires_at)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        <div className="md:col-span-2 rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-3 font-semibold">Stock actual</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Insumo</th>
-                <th className="pb-2">Ubicacion</th>
-                <th className="pb-2">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stocks.map((s) => (
-                <tr key={s.id} className="border-t">
-                  <td className="py-2">{s.ingredient?.name}</td>
-                  <td className="py-2 capitalize">{s.location}</td>
-                  <td className="py-2">{Number(s.quantity_base_unit).toLocaleString('es-CL')} {s.ingredient?.base_unit}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-3 font-semibold">Ajustar stock</h2>
-          <form onSubmit={handleAdjust} className="space-y-2 text-sm">
-            <input
-              type="number"
-              placeholder="ID de insumo"
-              required
-              value={form.ingredient_id}
-              onChange={(e) => setForm({ ...form, ingredient_id: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-            />
-            <select
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-            >
-              <option value="bodega">Bodega</option>
-              <option value="vitrina">Vitrina</option>
-            </select>
-            <input
-              type="number"
-              step="any"
-              placeholder="Cantidad (+ o -)"
-              required
-              value={form.quantity_delta}
-              onChange={(e) => setForm({ ...form, quantity_delta: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-            />
-            <input
-              type="text"
-              placeholder="Unidad (ej: bacha_18L, unidad, litro)"
-              required
-              value={form.unit}
-              onChange={(e) => setForm({ ...form, unit: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-            />
-            <select
-              value={form.reason}
-              onChange={(e) => setForm({ ...form, reason: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-            >
-              {REASONS.map((r) => (
-                <option key={r} value={r}>{r.replace('_', ' ')}</option>
-              ))}
-            </select>
-            <textarea
-              placeholder="Justificacion (requerida para mermas/ajustes)"
-              value={form.justification}
-              onChange={(e) => setForm({ ...form, justification: e.target.value })}
-              className="w-full rounded border border-gray-300 px-2 py-1.5"
-              rows="2"
-            />
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="px-5 py-3 border-b border-border flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          {INVENTORY_CATEGORIES.map((cat) => (
             <button
-              type="submit"
-              className="w-full rounded bg-brand-600 py-2 font-semibold text-white hover:bg-brand-700"
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-full text-12px font-semibold border ${
+                category === cat.id ? "bg-primary text-white border-primary" : "bg-muted text-ink border-border hover:bg-canvas"
+              }`}
             >
-              Registrar ajuste
+              {cat.label}
             </button>
-          </form>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-inkmuted" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar..."
+              className="pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-13px w-48 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          {alerts.length > 0 && (
+            <button
+              onClick={() => setShowAlerts(!showAlerts)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-12px font-semibold bg-warnbg text-warn"
+            >
+              <AlertTriangle size={13} />
+              {alerts.length} alertas
+            </button>
+          )}
         </div>
       </div>
+
+      {!perms.inventoryWaste && !perms.inventoryTransfer && (
+        <div className="px-5 py-2 bg-muted/60 border-b border-border text-11.5px text-inkmuted">
+          {perms.inventoryPurchase
+            ? "Puedes registrar compras. Traslados y mermas los gestiona Administración."
+            : "Modo solo lectura. Cualquier ajuste debe solicitarse a Administración."}
+        </div>
+      )}
+
+      {showAlerts && (
+        <div className="px-5 py-3 border-b border-border bg-warnbg/40 space-y-1">
+          {alerts.map((a) => (
+            <p key={a.item} className="text-12.5px text-warn">
+              <strong>{a.item}</strong>: {a.qty} {a.unit} (mínimo {a.min})
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <table className="w-full text-13px">
+          <thead>
+            <tr className="text-inkmuted text-left border-b border-border">
+              <th className="font-medium py-2">Producto</th>
+              <th className="font-medium py-2">Bodega</th>
+              <th className="font-medium py-2">Vitrina</th>
+              <th className="font-medium py-2">Total</th>
+              <th className="font-medium py-2">Estado</th>
+              <th className="font-medium py-2 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((item) => {
+              const total = item.bodega + item.vitrina;
+              const s = stockStatus(item);
+              const exp = expiryStatus(item);
+              return (
+                <tr
+                  key={item.id}
+                  onClick={() => setDetailId(item.id)}
+                  className="border-b border-border hover:bg-muted/50 cursor-pointer"
+                >
+                  <td className="py-2.5 font-medium text-ink">{item.name}</td>
+                  <td className="py-2.5 font-mono text-inkmuted">{formatQty(item.bodega, item.unit)} {item.unit}</td>
+                  <td className="py-2.5 font-mono text-inkmuted">{formatQty(item.vitrina, item.unit)} {item.unit}</td>
+                  <td className="py-2.5 font-mono font-semibold">{formatQty(total, item.unit)} {item.unit}</td>
+                  <td className="py-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <Badge tone={s.tone}>{s.label}</Badge>
+                      {exp && <Badge tone={exp.tone}>{exp.label}</Badge>}
+                    </div>
+                  </td>
+                  <td className="py-2.5 text-inkmuted">
+                    <ChevronRight size={15} />
+                  </td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-6 text-center text-inkmuted">
+                  No se encontraron ítems.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {detailId && <ItemDetailModal itemId={detailId} onClose={() => setDetailId(null)} />}
     </div>
-  )
+  );
 }
