@@ -13,6 +13,13 @@ use RuntimeException;
 
 class InventoryController extends Controller
 {
+    /**
+     * Motivos de ajuste que un operador puede registrar. Todo lo que no este en
+     * esta lista (traslado bodega->vitrina, mermas, vencimientos, etc.) queda
+     * reservado a admin, aunque la ruta ya permita el rol "operador" via middleware.
+     */
+    private const OPERADOR_ALLOWED_REASONS = ['compra', 'purchase'];
+
     public function __construct(
         private InventoryService $inventoryService,
         private UnitConversionService $unitConversion
@@ -34,6 +41,21 @@ class InventoryController extends Controller
 
     public function adjust(AdjustStockRequest $request)
     {
+        $user = $request->user();
+
+        // Un operador solo puede registrar compras (entradas de stock con reason=compra).
+        // Traslados, mermas y cualquier otro motivo quedan reservados a admin.
+        if ($user->isOperador()) {
+            $isPurchase = in_array($request->reason, self::OPERADOR_ALLOWED_REASONS, true);
+            $isInboundQty = $request->quantity_delta > 0;
+
+            if (!$isPurchase || !$isInboundQty) {
+                return response()->json([
+                    'message' => 'Como operador solo puedes registrar compras (ingreso de stock). Traslados y mermas los gestiona Administración.',
+                ], 403);
+            }
+        }
+
         $converted = $this->unitConversion->toBaseUnit($request->unit, abs($request->quantity_delta));
         $signedQty = $request->quantity_delta < 0 ? -$converted['quantity_base_unit'] : $converted['quantity_base_unit'];
 
@@ -43,7 +65,7 @@ class InventoryController extends Controller
                 $request->location,
                 $signedQty,
                 $request->reason,
-                $request->user()->id,
+                $user->id,
                 $request->justification
             );
         } catch (RuntimeException $e) {
@@ -75,5 +97,22 @@ class InventoryController extends Controller
             'input_quantity' => $validated['quantity'],
             'result' => $result,
         ]);
+    }
+
+    /**
+     * Aviso de stock bajo a administración. Por ahora solo registra la intención
+     * en AuditService; el envío real de correo/WhatsApp queda pendiente (deuda técnica).
+     */
+    public function notifyLowStock(Request $request, Stock $stock)
+    {
+        AuditService::log('stock.notify_low_stock', 'Stock', $stock->id, [
+            'requested_by' => $request->user()->id,
+            'ingredient_id' => $stock->ingredient_id ?? null,
+        ]);
+
+        // TODO: disparar Notification/Mail real a los usuarios con rol admin.
+        // Notification::send(User::where('role', 'admin')->get(), new LowStockAlert($stock));
+
+        return response()->json(['message' => 'Administración fue notificada.']);
     }
 }
