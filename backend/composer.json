@@ -11,7 +11,10 @@
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "laravel/pint": "^1.13",
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^11.0",
+        "nunomaduro/collision": "^8.1",
+        "brianium/paratest": "^7.4",
+        "mockery/mockery": "^1.6"
     },
     "autoload": {
         "psr-4": {
@@ -32,5 +35,10 @@
         ]
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "platform": {
+            "php": "8.2.33"
+        }
+    }
 }
