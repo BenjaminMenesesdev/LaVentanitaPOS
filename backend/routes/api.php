@@ -73,6 +73,9 @@ Route::middleware(['auth:sanctum', 'tenant'])->group(function () {
 
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::post('/suppliers', [SupplierController::class, 'store']);
+        Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
+        Route::put('/suppliers/{supplier}', [SupplierController::class, 'update']);
+        Route::delete('/suppliers/{supplier}', [SupplierController::class, 'destroy']);
         Route::get('/purchase-suggestions', [PurchaseSuggestionController::class, 'index']);
         Route::post('/register', [AuthController::class, 'register'])->middleware('plan.limit:users');
     });

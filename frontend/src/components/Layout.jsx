@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, ShoppingCart, Boxes, LayoutDashboard, Users, IceCreamCone } from "lucide-react";
+import { LogOut, ShoppingCart, Boxes, LayoutDashboard, Users, IceCreamCone, Truck } from "lucide-react";
 import { useAppState, useAppDispatch } from "../context/AppContext.jsx";
 import { NAV_BY_ROLE, ROLE_LABELS } from "../roles.js";
 import { logout as logoutRequest } from "../services/api.js";
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: "pos", label: "Mostrador", icon: ShoppingCart },
   { id: "inventario", label: "Inventario", icon: Boxes },
   { id: "dashboard", label: "Panel de Control", icon: LayoutDashboard },
+  { id: "proveedores", label: "Proveedores", icon: Truck },
   { id: "usuarios", label: "Usuarios", icon: Users },
 ];
 

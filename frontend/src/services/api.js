@@ -127,4 +127,20 @@ export async function deleteUser(userId) {
   return del(`/users/${userId}`);
 }
 
+export async function fetchSuppliers() {
+  return get("/suppliers");
+}
+
+export async function createSupplier(payload) {
+  return post("/suppliers", payload);
+}
+
+export async function updateSupplier(supplierId, payload) {
+  return put(`/suppliers/${supplierId}`, payload);
+}
+
+export async function deleteSupplier(supplierId) {
+  return del(`/suppliers/${supplierId}`);
+}
+
 export default api;

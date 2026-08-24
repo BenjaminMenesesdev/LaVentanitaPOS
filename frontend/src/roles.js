@@ -8,7 +8,7 @@ export const ROLE_LABELS = {
 };
 
 export const NAV_BY_ROLE = {
-  [ROLES.ADMIN]: ["pos", "inventario", "dashboard", "usuarios"],
+  [ROLES.ADMIN]: ["pos", "inventario", "dashboard", "proveedores", "usuarios"],
   [ROLES.OPERADOR]: ["pos", "inventario"],
   [ROLES.AUDITORIA]: ["inventario", "dashboard"],
 };
@@ -25,6 +25,7 @@ export const PERMISSIONS = {
     dashboardRead: true,
     dashboardFinancials: true,
     manageUsers: true,
+    manageSuppliers: true,
     requiresDoubleConfirmOnDelete: true,
   },
   [ROLES.OPERADOR]: {
@@ -38,6 +39,7 @@ export const PERMISSIONS = {
     dashboardRead: false,
     dashboardFinancials: false,
     manageUsers: false,
+    manageSuppliers: false,
     requiresDoubleConfirmOnDelete: false,
   },
   [ROLES.AUDITORIA]: {
@@ -51,6 +53,7 @@ export const PERMISSIONS = {
     dashboardRead: true,
     dashboardFinancials: true,
     manageUsers: false,
+    manageSuppliers: false,
     requiresDoubleConfirmOnDelete: false,
   },
 };

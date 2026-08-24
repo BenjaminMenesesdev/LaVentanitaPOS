@@ -6,6 +6,7 @@ import POSView from "./views/POSView.jsx";
 import InventoryView from "./views/InventoryView.jsx";
 import DashboardView from "./views/DashboardView.jsx";
 import UsersView from "./views/UsersView.jsx";
+import SuppliersView from "./views/SuppliersView.jsx";
 import { useAppState } from "./context/AppContext.jsx";
 import { canAccessView, NAV_BY_ROLE } from "./roles.js";
 
@@ -29,6 +30,7 @@ export default function App() {
       {effectiveView === "pos" && <POSView />}
       {effectiveView === "inventario" && <InventoryView />}
       {effectiveView === "dashboard" && <DashboardView setView={setView} />}
+      {effectiveView === "proveedores" && <SuppliersView />}
       {effectiveView === "usuarios" && <UsersView />}
 
       {toast && (
