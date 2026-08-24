@@ -16,7 +16,7 @@ class SupplierController extends Controller
 
     public function store(Request $request)
     {
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             return response()->json(['message' => 'Solo administradores gestionan proveedores.'], 403);
         }
 

@@ -12,11 +12,11 @@ class EnsureUserHasRole
     {
         $user = $request->user();
 
-        if (!$user || !$user->is_active) {
+        if (! $user || ! $user->is_active) {
             return response()->json(['message' => 'Cuenta inactiva o no autenticada.'], 403);
         }
 
-        if (!in_array($user->role, $roles, true)) {
+        if (! in_array($user->role, $roles, true)) {
             return response()->json(['message' => 'No tienes permiso para esta acción.'], 403);
         }
 

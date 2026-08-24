@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Ingredient;
-use Carbon\Carbon;
 
 class PurchaseSuggestionService
 {
@@ -29,6 +28,7 @@ class PurchaseSuggestionService
     private function estimateDailyBurnRate(Ingredient $ingredient, int $windowDays): float
     {
         $totalConsumed = (float) $ingredient->stocks()->sum('quantity_base_unit');
+
         return $totalConsumed > 0 ? $totalConsumed / max($windowDays, 1) : 0;
     }
 }

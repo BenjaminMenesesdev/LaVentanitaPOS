@@ -29,7 +29,7 @@ class AdjustStockRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $ingredientId = $this->input('ingredient_id');
-            if ($ingredientId && !Ingredient::where('id', $ingredientId)->exists()) {
+            if ($ingredientId && ! Ingredient::where('id', $ingredientId)->exists()) {
                 $validator->errors()->add('ingredient_id', 'El insumo indicado no existe o no pertenece a este negocio.');
             }
         });

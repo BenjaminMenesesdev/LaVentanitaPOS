@@ -18,7 +18,7 @@ class ResolveTenant
         if ($request->user() && $request->user()->tenant_id) {
             $tenant = Tenant::withoutGlobalScopes()->find($request->user()->tenant_id);
         } elseif ($request->hasHeader('X-Tenant-Slug')) {
-            if (!$request->user() || !$request->user()->isSuperAdmin()) {
+            if (! $request->user() || ! $request->user()->isSuperAdmin()) {
                 return response()->json(['message' => 'No autorizado para seleccionar tenant via header.'], 403);
             }
 
@@ -36,11 +36,11 @@ class ResolveTenant
             }
         }
 
-        if (!$tenant) {
+        if (! $tenant) {
             return response()->json(['message' => 'Tenant no identificado.'], 400);
         }
 
-        if (!$tenant->isActive()) {
+        if (! $tenant->isActive()) {
             return response()->json(['message' => 'La suscripcion de este negocio no esta activa.'], 402);
         }
 

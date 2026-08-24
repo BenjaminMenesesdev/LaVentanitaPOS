@@ -27,7 +27,7 @@ class InventoryService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$stock) {
+            if (! $stock) {
                 $stock = Stock::create([
                     'ingredient_id' => $ingredientId,
                     'location' => $location,
@@ -74,7 +74,7 @@ class InventoryService
                 ->lockForUpdate()
                 ->first();
 
-            if (!$stock || (float) $stock->quantity_base_unit < $req['quantity_base_unit']) {
+            if (! $stock || (float) $stock->quantity_base_unit < $req['quantity_base_unit']) {
                 throw new RuntimeException("Stock insuficiente para ingrediente ID {$req['ingredient_id']}.");
             }
 
@@ -109,7 +109,7 @@ class InventoryService
 
             $quantityToRestore = abs((float) $movement->quantity_delta_base_unit);
 
-            if (!$stock) {
+            if (! $stock) {
                 $stock = Stock::create([
                     'ingredient_id' => $movement->ingredient_id,
                     'location' => $movement->location,

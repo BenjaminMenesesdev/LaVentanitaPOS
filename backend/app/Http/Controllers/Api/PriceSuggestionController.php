@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\App;
 
 class PriceSuggestionController extends Controller
 {
-    public function __construct(private PriceSuggestionService $priceSuggestionService)
-    {
-    }
+    public function __construct(private PriceSuggestionService $priceSuggestionService) {}
 
     public function index()
     {
@@ -33,6 +31,7 @@ class PriceSuggestionController extends Controller
     {
         $suggestion = $this->priceSuggestionService->apply($suggestion);
         AuditService::log('price_suggestion.apply', 'PriceSuggestion', $suggestion->id);
+
         return response()->json($suggestion);
     }
 
@@ -40,6 +39,7 @@ class PriceSuggestionController extends Controller
     {
         $suggestion = $this->priceSuggestionService->discard($suggestion);
         AuditService::log('price_suggestion.discard', 'PriceSuggestion', $suggestion->id);
+
         return response()->json($suggestion);
     }
 }

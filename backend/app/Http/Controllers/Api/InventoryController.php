@@ -26,8 +26,7 @@ class InventoryController extends Controller
     public function __construct(
         private InventoryService $inventoryService,
         private UnitConversionService $unitConversion
-    ) {
-    }
+    ) {}
 
     public function index()
     {
@@ -54,7 +53,7 @@ class InventoryController extends Controller
             $isAllowedReason = in_array($request->reason, self::OPERADOR_ALLOWED_REASONS, true);
             $isInboundQty = $request->quantity_delta > 0;
 
-            if (!$isAllowedReason || !$isInboundQty) {
+            if (! $isAllowedReason || ! $isInboundQty) {
                 return response()->json([
                     'message' => 'Como operador solo puedes registrar compras (recepcion de stock). Traslados y mermas los gestiona Administración.',
                 ], 403);

@@ -8,9 +8,7 @@ use App\Services\PurchaseSuggestionService;
 
 class PurchaseSuggestionController extends Controller
 {
-    public function __construct(private PurchaseSuggestionService $suggestionService)
-    {
-    }
+    public function __construct(private PurchaseSuggestionService $suggestionService) {}
 
     public function index()
     {

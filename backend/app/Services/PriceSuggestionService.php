@@ -54,6 +54,7 @@ class PriceSuggestionService
         return DB::transaction(function () use ($suggestion) {
             $suggestion->product->update(['sale_price' => $suggestion->suggested_price]);
             $suggestion->update(['status' => 'aplicada']);
+
             return $suggestion->fresh();
         });
     }
@@ -61,6 +62,7 @@ class PriceSuggestionService
     public function discard(PriceSuggestion $suggestion): PriceSuggestion
     {
         $suggestion->update(['status' => 'descartada']);
+
         return $suggestion->fresh();
     }
 }

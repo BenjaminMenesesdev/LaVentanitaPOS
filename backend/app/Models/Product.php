@@ -49,6 +49,7 @@ class Product extends Model
     public function lastSaleDate(): ?string
     {
         $lastItem = $this->saleItems()->latest('created_at')->first();
+
         return $lastItem?->created_at?->toDateString();
     }
 }

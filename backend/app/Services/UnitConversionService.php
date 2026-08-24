@@ -16,7 +16,7 @@ class UnitConversionService
         }
 
         $conversion = UnitConversion::where('unit_name', $unitName)->first();
-        if (!$conversion) {
+        if (! $conversion) {
             throw new InvalidArgumentException("Unidad de conversión no registrada: {$unitName}");
         }
 
@@ -33,7 +33,7 @@ class UnitConversionService
         }
 
         $conversion = UnitConversion::where('unit_name', $unitName)->first();
-        if (!$conversion) {
+        if (! $conversion) {
             throw new InvalidArgumentException("Unidad de conversión no registrada: {$unitName}");
         }
 

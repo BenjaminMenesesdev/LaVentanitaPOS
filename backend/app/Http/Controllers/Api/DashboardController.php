@@ -10,9 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function __construct(private InventoryService $inventoryService)
-    {
-    }
+    public function __construct(private InventoryService $inventoryService) {}
 
     public function today()
     {

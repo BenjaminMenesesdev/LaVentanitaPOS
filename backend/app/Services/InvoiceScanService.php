@@ -30,7 +30,7 @@ class InvoiceScanService
         DB::transaction(function () use ($scan, $items, $userId) {
             foreach ($items as $item) {
                 $ingredient = Ingredient::find($item['ingredient_id']);
-                if (!$ingredient) {
+                if (! $ingredient) {
                     continue;
                 }
 
@@ -58,6 +58,7 @@ class InvoiceScanService
     public function markAsError(InvoiceScan $scan, string $message): InvoiceScan
     {
         $scan->update(['status' => 'error', 'error_message' => $message]);
+
         return $scan->fresh();
     }
 }

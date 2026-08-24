@@ -59,12 +59,14 @@ class Tenant extends Model
     public function hasReachedUserLimit(): bool
     {
         $max = $this->plan?->max_users;
+
         return $max !== null && $this->currentUserCount() >= $max;
     }
 
     public function hasReachedProductLimit(): bool
     {
         $max = $this->plan?->max_products;
+
         return $max !== null && $this->currentProductCount() >= $max;
     }
 }

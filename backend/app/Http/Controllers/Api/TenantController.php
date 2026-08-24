@@ -68,6 +68,7 @@ class TenantController extends Controller
     public function current(Request $request)
     {
         $tenant = $request->user()->tenant()->with('plan')->first();
+
         return response()->json([
             'tenant' => $tenant,
             'usage' => [

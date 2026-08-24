@@ -19,7 +19,7 @@ class ProductController extends Controller
     {
         $product = Product::where('barcode', $barcode)->where('is_active', true)->first();
 
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Producto no encontrado para ese código.'], 404);
         }
 
@@ -28,7 +28,7 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             return response()->json(['message' => 'Solo administradores pueden crear productos.'], 403);
         }
 
@@ -52,7 +52,7 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             return response()->json(['message' => 'Solo administradores pueden modificar precios.'], 403);
         }
 

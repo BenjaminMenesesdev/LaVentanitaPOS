@@ -13,7 +13,7 @@ class CheckPlanFeature
     {
         $tenant = App::bound('currentTenant') ? App::make('currentTenant') : null;
 
-        if (!$tenant || !$tenant->hasFeature($featureKey)) {
+        if (! $tenant || ! $tenant->hasFeature($featureKey)) {
             return response()->json([
                 'message' => 'Esta funcion no esta disponible en tu plan actual.',
                 'required_feature' => $featureKey,

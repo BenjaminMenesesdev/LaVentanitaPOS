@@ -16,9 +16,7 @@ class SaleService
         'credito' => 0.032,
     ];
 
-    public function __construct(private InventoryService $inventoryService)
-    {
-    }
+    public function __construct(private InventoryService $inventoryService) {}
 
     public function registerSale(array $items, string $paymentMethod, int $userId): Sale
     {
@@ -77,7 +75,7 @@ class SaleService
                 ->values()
                 ->all();
 
-            if (!empty($requirementsPayload)) {
+            if (! empty($requirementsPayload)) {
                 $this->inventoryService->deductForSale($requirementsPayload, $userId, $sale->id);
             }
 

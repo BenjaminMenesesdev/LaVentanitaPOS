@@ -29,15 +29,17 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $throttleKey = Str::lower($request->email) . '|' . $request->ip();
+        $throttleKey = Str::lower($request->email).'|'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
+
             return response()->json(['message' => "Demasiados intentos. Reintenta en {$seconds}s."], 429);
         }
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (! Auth::attempt($request->only('email', 'password'))) {
             RateLimiter::hit($throttleKey, 60);
+
             return response()->json(['message' => 'Credenciales inválidas.'], 401);
         }
 
@@ -46,8 +48,9 @@ class AuthController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             Auth::logout();
+
             return response()->json(['message' => 'Cuenta desactivada. Contacta al administrador.'], 403);
         }
 
@@ -66,7 +69,7 @@ class AuthController extends Controller
 
         $stored = RefreshToken::where('token', $validated['refresh_token'])->first();
 
-        if (!$stored || !$stored->isValid()) {
+        if (! $stored || ! $stored->isValid()) {
             return response()->json(['message' => 'Refresh token inválido o expirado.'], 401);
         }
 

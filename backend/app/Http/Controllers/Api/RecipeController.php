@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class RecipeController extends Controller
 {
-    public function __construct(private UnitConversionService $unitConversion)
-    {
-    }
+    public function __construct(private UnitConversionService $unitConversion) {}
 
     public function show(Product $product)
     {

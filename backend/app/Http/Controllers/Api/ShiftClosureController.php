@@ -9,9 +9,7 @@ use App\Services\ShiftClosureService;
 
 class ShiftClosureController extends Controller
 {
-    public function __construct(private ShiftClosureService $shiftClosureService)
-    {
-    }
+    public function __construct(private ShiftClosureService $shiftClosureService) {}
 
     public function store(CloseShiftRequest $request)
     {

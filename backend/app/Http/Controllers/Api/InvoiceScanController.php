@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Ingredient;
 use App\Models\InvoiceScan;
 use App\Models\Supplier;
 use App\Services\AuditService;
@@ -13,9 +14,7 @@ use RuntimeException;
 
 class InvoiceScanController extends Controller
 {
-    public function __construct(private InvoiceScanService $invoiceScanService)
-    {
-    }
+    public function __construct(private InvoiceScanService $invoiceScanService) {}
 
     public function index()
     {
@@ -29,7 +28,7 @@ class InvoiceScanController extends Controller
             'supplier_id' => ['nullable', 'integer'],
         ]);
 
-        if (!empty($validated['supplier_id']) && !Supplier::where('id', $validated['supplier_id'])->exists()) {
+        if (! empty($validated['supplier_id']) && ! Supplier::where('id', $validated['supplier_id'])->exists()) {
             return response()->json(['message' => 'El proveedor indicado no existe o no pertenece a este negocio.'], 422);
         }
 
@@ -53,7 +52,7 @@ class InvoiceScanController extends Controller
         ]);
 
         $ingredientIds = collect($validated['items'])->pluck('ingredient_id')->unique();
-        $validIds = \App\Models\Ingredient::whereIn('id', $ingredientIds)->pluck('id');
+        $validIds = Ingredient::whereIn('id', $ingredientIds)->pluck('id');
 
         if ($validIds->count() !== $ingredientIds->count()) {
             return response()->json(['message' => 'Uno o más insumos indicados no existen o no pertenecen a este negocio.'], 422);

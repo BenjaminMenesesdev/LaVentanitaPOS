@@ -12,9 +12,7 @@ use RuntimeException;
 
 class SaleController extends Controller
 {
-    public function __construct(private SaleService $saleService)
-    {
-    }
+    public function __construct(private SaleService $saleService) {}
 
     public function index(Request $request)
     {
@@ -46,7 +44,7 @@ class SaleController extends Controller
 
     public function void(Request $request, Sale $sale)
     {
-        if (!$request->user()->isAdmin()) {
+        if (! $request->user()->isAdmin()) {
             return response()->json(['message' => 'Solo administradores pueden anular ventas.'], 403);
         }
 

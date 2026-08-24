@@ -35,12 +35,13 @@ class Ingredient extends Model
         return $this->hasMany(IngredientPriceHistory::class);
     }
 
-    public function totalStock(string $location = null): float
+    public function totalStock(?string $location = null): float
     {
         $query = $this->stocks();
         if ($location) {
             $query->where('location', $location);
         }
+
         return (float) $query->sum('quantity_base_unit');
     }
 
