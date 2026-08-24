@@ -19,7 +19,10 @@ return new class extends Migration
             ]);
             $table->string('justification', 255)->nullable();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
-            $table->foreignId('sale_id')->nullable()->constrained('sales')->nullOnDelete();
+            // sale_id se agrega en 2024_01_01_000011_add_sale_id_to_stock_movements_table.php:
+            // la tabla "sales" todavia no existe en este punto de la migracion (se crea despues),
+            // y Postgres (a diferencia de SQLite) valida la tabla referenciada al momento del
+            // CREATE TABLE / ADD CONSTRAINT, no solo al insertar filas.
             $table->timestamps();
             $table->index(['ingredient_id', 'created_at']);
         });
