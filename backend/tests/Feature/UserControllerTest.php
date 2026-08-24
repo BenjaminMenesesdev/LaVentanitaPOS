@@ -14,8 +14,11 @@ class UserControllerTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $admin;
+
     private User $operador;
+
     private User $auditoria;
 
     protected function setUp(): void
