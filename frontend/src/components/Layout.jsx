@@ -1,58 +1,72 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext.jsx'
-import { classNames } from '../utils.js'
+import { LogOut, ShoppingCart, Boxes, LayoutDashboard, Users } from "lucide-react";
+import { useAppState, useAppDispatch } from "../context/AppContext.jsx";
+import { NAV_BY_ROLE, ROLE_LABELS } from "../roles.js";
+import { logout as logoutRequest } from "../services/api.js";
 
-const navItems = [
-  { to: '/', label: 'Dashboard', roles: ['admin', 'cajero'] },
-  { to: '/pos', label: 'Punto de Venta', roles: ['admin', 'cajero'] },
-  { to: '/inventory', label: 'Inventario', roles: ['admin', 'cajero'] },
-  { to: '/suppliers', label: 'Proveedores', roles: ['admin'] },
-  { to: '/users', label: 'Usuarios', roles: ['admin'] },
-]
+const NAV_ITEMS = [
+  { id: "pos", label: "Ventas", icon: ShoppingCart },
+  { id: "inventario", label: "Inventario", icon: Boxes },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "usuarios", label: "Usuarios", icon: Users },
+];
 
-export default function Layout({ children }) {
-  const { user, logout, isAdmin } = useAuth()
-  const navigate = useNavigate()
+export default function Layout({ view, setView, children }) {
+  const { user } = useAppState();
+  const { logoutLocal } = useAppDispatch();
+  const allowed = NAV_BY_ROLE[user?.role] || [];
+  const visibleItems = NAV_ITEMS.filter((item) => allowed.includes(item.id));
 
   async function handleLogout() {
-    await logout()
-    navigate('/login')
+    try {
+      await logoutRequest();
+    } catch {
+      // si falla la llamada al backend, igual cerramos sesión localmente
+    } finally {
+      logoutLocal();
+    }
   }
 
   return (
-    <div className="flex h-screen">
-      <aside className="w-60 flex-shrink-0 bg-brand-700 text-white flex flex-col">
-        <div className="p-4 text-xl font-bold border-b border-brand-600">La Ventanita</div>
-        <nav className="flex-1 p-2 space-y-1">
-          {navItems
-            .filter((item) => item.roles.includes(user?.role))
-            .map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  classNames(
-                    'block rounded px-3 py-2 text-sm font-medium',
-                    isActive ? 'bg-brand-600' : 'hover:bg-brand-600/60'
-                  )
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-        </nav>
-        <div className="p-4 border-t border-brand-600 text-sm">
-          <div className="font-semibold">{user?.name}</div>
-          <div className="text-brand-100 text-xs mb-2">{isAdmin ? 'Administrador' : 'Cajero'}</div>
+    <div className="min-h-screen bg-canvas flex flex-col">
+      <header className="bg-surface border-b border-border px-5 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <p className="text-15px font-bold text-primary-dark">La Ventanita</p>
+          <nav className="flex items-center gap-1">
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              const active = view === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setView(item.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-13px font-semibold ${
+                    active ? "bg-primary text-white" : "text-inkmuted hover:bg-muted"
+                  }`}
+                >
+                  <Icon size={14} />
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-13px font-semibold text-ink leading-tight">{user?.name}</p>
+            <p className="text-11px text-inkmuted leading-tight">{ROLE_LABELS[user?.role] || user?.role}</p>
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full rounded bg-brand-600 hover:bg-brand-500 px-3 py-1.5 text-xs font-medium"
+            className="p-2 rounded-md border border-border text-inkmuted hover:bg-canvas hover:text-danger"
+            title="Cerrar sesión"
           >
-            Cerrar sesion
+            <LogOut size={15} />
           </button>
         </div>
-      </aside>
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-6">{children}</main>
+      </header>
+
+      <main className="flex-1 flex min-h-0">{children}</main>
     </div>
-  )
+  );
 }

@@ -1,132 +1,188 @@
-import { useEffect, useState } from 'react'
-import { dashboardService } from '../services/dashboardService'
-import { useAuth } from '../context/AuthContext.jsx'
-import { formatCurrency } from '../utils.js'
-import AlertBanner from '../components/AlertBanner.jsx'
+import { useMemo } from "react";
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip, Cell } from "recharts";
+import { Download, AlertTriangle, ShoppingCart, Boxes } from "lucide-react";
+import { useAppState } from "../context/AppContext.jsx";
+import { PAYMENT_METHODS, HISTORICAL_DAILY_TOTALS, HISTORICAL_PRODUCT_UNITS } from "../data/data.js";
+import { formatCLP, formatTime, getStockAlerts } from "../utils.js";
+import Badge from "../components/ui/Badge.jsx";
+import { permissionsFor } from "../roles.js";
+
+const COGS_RATE = 0.31;
+
+function baseName(name) {
+  return name.split(" (")[0];
+}
+
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="bg-surface border border-border rounded-xl p-4">
+      <p className="text-11px font-bold uppercase tracking-wide text-inkmuted">{label}</p>
+      <p className="text-22px font-mono font-bold mt-1">{value}</p>
+      {sub && <p className="text-11.5px text-inkmuted mt-0.5">{sub}</p>}
+    </div>
+  );
+}
 
 export default function DashboardView() {
-  const [summary, setSummary] = useState(null)
-  const [ranking, setRanking] = useState([])
-  const [error, setError] = useState('')
-  const { isAdmin } = useAuth()
+  const { sales, stock, movements, dashboard, alerts: backendAlerts, user } = useAppState();
+  const perms = permissionsFor(user?.role);
 
-  useEffect(() => {
-    load()
-  }, [])
+  const ventasHoy = dashboard?.total ?? sales.reduce((s, sale) => s + sale.total, 0);
+  const transacciones = dashboard?.count ?? sales.length;
+  const comisionesHoy = useMemo(() => sales.reduce((s, sale) => s + (sale.commission || 0), 0), [sales]);
+  const margenNeto = ventasHoy - comisionesHoy - ventasHoy * COGS_RATE;
+  const ticketPromedio = transacciones > 0 ? ventasHoy / transacciones : 0;
 
-  async function load() {
-    try {
-      const data = await dashboardService.today()
-      setSummary(data)
-      if (isAdmin) {
-        const rankingData = await dashboardService.productRanking()
-        setRanking(rankingData)
-      }
-    } catch (err) {
-      setError('No se pudo cargar el dashboard.')
-    }
-  }
+  const alerts =
+    Array.isArray(backendAlerts) && backendAlerts.length > 0 && backendAlerts[0]?.item ? backendAlerts : getStockAlerts(stock);
 
-  if (!summary) {
-    return <div>Cargando dashboard...</div>
+  const paymentBreakdown = useMemo(() => {
+    return PAYMENT_METHODS.map((m) => {
+      const forMethod = sales.filter((s) => s.method === m.id);
+      const bruto = forMethod.reduce((sum, s) => sum + s.total, 0);
+      const neto = bruto * (1 - m.commission);
+      return { ...m, bruto, neto };
+    });
+  }, [sales]);
+
+  const chartData = useMemo(() => [...HISTORICAL_DAILY_TOTALS, { day: "Hoy", total: ventasHoy }], [ventasHoy]);
+
+  const ranking = useMemo(() => {
+    const units = { ...HISTORICAL_PRODUCT_UNITS };
+    sales.forEach((sale) => {
+      sale.items.forEach((it) => {
+        const key = baseName(it.name);
+        units[key] = (units[key] || 0) + it.qty;
+      });
+    });
+    return Object.entries(units).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  }, [sales]);
+
+  const recentMovements = movements.slice(0, 5);
+
+  function exportExcel() {
+    const rows = [["Producto", "Unidades"], ...ranking.map(([name, units]) => [name, units])];
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "ventas-hoy.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Dashboard - {summary.date}</h1>
-      <AlertBanner type="error" message={error} onClose={() => setError('')} />
-
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-        <MetricCard label="Ventas brutas" value={formatCurrency(summary.total_gross)} />
-        <MetricCard label="Ventas netas" value={formatCurrency(summary.total_net)} />
-        <MetricCard label="Comisiones" value={formatCurrency(summary.total_commission)} />
-        <MetricCard label="Margen neto" value={formatCurrency(summary.net_margin)} highlight />
+    <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-18px font-bold text-ink">Dashboard</h1>
+        {perms.dashboardFinancials && (
+          <button
+            onClick={exportExcel}
+            className="flex items-center gap-1.5 text-12.5px font-semibold border border-border px-3 py-1.5 rounded-md text-inkmuted hover:bg-canvas"
+          >
+            <Download size={13} />
+            Exportar
+          </button>
+        )}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-3 font-semibold">Desglose por medio de pago</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Medio</th>
-                <th className="pb-2">Bruto</th>
-                <th className="pb-2">Neto</th>
-                <th className="pb-2">Transacciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(summary.by_payment_method || {}).map(([method, data]) => (
-                <tr key={method} className="border-t">
-                  <td className="py-2 capitalize">{method}</td>
-                  <td className="py-2">{formatCurrency(data.gross)}</td>
-                  <td className="py-2">{formatCurrency(data.net)}</td>
-                  <td className="py-2">{data.count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <StatCard label="Ventas hoy" value={formatCLP(ventasHoy)} sub={`${transacciones} transacciones`} />
+        <StatCard label="Ticket promedio" value={formatCLP(ticketPromedio)} />
+        {perms.dashboardFinancials && <StatCard label="Comisiones" value={formatCLP(comisionesHoy)} />}
+        {perms.dashboardFinancials && <StatCard label="Margen neto estimado" value={formatCLP(margenNeto)} sub="Insumos + comisiones descontados" />}
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-surface border border-border rounded-xl p-4">
+          <p className="text-13px font-bold text-ink mb-3">Ventas últimos días</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={chartData}>
+              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+              <Tooltip formatter={(v) => formatCLP(v)} />
+              <Bar dataKey="total" radius={[6, 6, 0, 0]}>
+                {chartData.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.day === "Hoy" ? "#5080BE" : "#7EBBDA"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-3 font-semibold">Alertas</h2>
-          <div className="space-y-2 text-sm">
-            <AlertRow
-              label="Insumos en stock critico"
-              count={summary.alerts?.critical_stock ?? 0}
-              tone="warning"
-            />
-            <AlertRow
-              label="Proximos a vencer"
-              count={summary.alerts?.expiring_soon ?? 0}
-              tone="error"
-            />
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <p className="text-13px font-bold text-ink mb-3 flex items-center gap-1.5">
+            <AlertTriangle size={14} className="text-warn" />
+            Alertas de stock
+          </p>
+          {alerts.length === 0 ? (
+            <p className="text-12.5px text-inkmuted">Sin alertas activas.</p>
+          ) : (
+            <div className="space-y-2">
+              {alerts.map((a, idx) => (
+                <div key={idx} className="flex justify-between text-12.5px bg-warnbg/50 px-3 py-2 rounded-lg">
+                  <span className="text-ink font-medium">{a.item}</span>
+                  <span className="text-warn font-mono">{a.qty} {a.unit}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {perms.dashboardFinancials && (
+        <div className="grid lg:grid-cols-3 gap-4 mt-4">
+          <div className="bg-surface border border-border rounded-xl p-4">
+            <p className="text-13px font-bold text-ink mb-3 flex items-center gap-1.5">
+              <ShoppingCart size={14} />
+              Por medio de pago
+            </p>
+            <div className="space-y-2">
+              {paymentBreakdown.map((m) => (
+                <div key={m.id} className="flex justify-between text-12.5px">
+                  <span className="text-inkmuted">{m.label}</span>
+                  <span className="font-mono font-semibold">{formatCLP(m.neto)}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {isAdmin && ranking.length > 0 && (
-        <div className="rounded-lg bg-white p-4 shadow">
-          <h2 className="mb-3 font-semibold">Ranking de productos</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500">
-                <th className="pb-2">Producto</th>
-                <th className="pb-2">Cantidad vendida</th>
-                <th className="pb-2">Ingresos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((row) => (
-                <tr key={row.name} className="border-t">
-                  <td className="py-2">{row.name}</td>
-                  <td className="py-2">{row.total_quantity}</td>
-                  <td className="py-2">{formatCurrency(row.total_revenue)}</td>
-                </tr>
+          <div className="bg-surface border border-border rounded-xl p-4">
+            <p className="text-13px font-bold text-ink mb-3">Ranking de productos</p>
+            <div className="space-y-1.5">
+              {ranking.map(([name, units]) => (
+                <div key={name} className="flex justify-between text-12.5px">
+                  <span className="text-ink">{name}</span>
+                  <Badge tone="neutral">{units} u.</Badge>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          <div className="bg-surface border border-border rounded-xl p-4">
+            <p className="text-13px font-bold text-ink mb-3 flex items-center gap-1.5">
+              <Boxes size={14} />
+              Movimientos recientes
+            </p>
+            {recentMovements.length === 0 ? (
+              <p className="text-12.5px text-inkmuted">Sin movimientos recientes.</p>
+            ) : (
+              <div className="space-y-2">
+                {recentMovements.map((m) => (
+                  <div key={m.id} className="text-12.5px">
+                    <p className="text-ink font-medium">{m.itemName}</p>
+                    <p className="text-inkmuted">
+                      {m.text} · {formatTime(m.time)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
-  )
-}
-
-function MetricCard({ label, value, highlight }) {
-  return (
-    <div className={`rounded-lg p-4 shadow ${highlight ? 'bg-brand-600 text-white' : 'bg-white'}`}>
-      <div className={`text-xs ${highlight ? 'text-brand-100' : 'text-gray-500'}`}>{label}</div>
-      <div className="mt-1 text-xl font-bold">{value}</div>
-    </div>
-  )
-}
-
-function AlertRow({ label, count, tone }) {
-  const colors = { warning: 'text-amber-600', error: 'text-red-600' }
-  return (
-    <div className="flex items-center justify-between rounded bg-gray-50 px-3 py-2">
-      <span>{label}</span>
-      <span className={`font-bold ${count > 0 ? colors[tone] : 'text-gray-400'}`}>{count}</span>
-    </div>
-  )
+  );
 }
