@@ -1,0 +1,171 @@
+name: CD - Deploy a AWS ECS
+
+# Solo se dispara cuando el workflow "CI" termina EXITOSAMENTE sobre main - nunca despliega
+# codigo que no haya pasado lint (Pint), tests (PHPUnit) y escaneo de secretos (Gitleaks).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write   # requerido para OIDC (sin credenciales AWS de larga duracion)
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+
+jobs:
+  build-and-push:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    name: Build y push de imagenes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            context: backend
+            dockerfile: backend/Dockerfile
+          - service: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+          - service: nginx
+            context: nginx
+            dockerfile: nginx/Dockerfile
+    outputs:
+      image_tag: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login en ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build y push ${{ matrix.service }}
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          REPO: laventanita/${{ matrix.service }}
+          TAG: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          docker build -t "$REGISTRY/$REPO:$TAG" -f "${{ matrix.dockerfile }}" "${{ matrix.context }}"
+          docker push "$REGISTRY/$REPO:$TAG"
+
+  migrate:
+    name: Migraciones de base de datos
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Registrar nueva revision del task definition (backend) con la imagen recien construida
+        id: register-backend
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        run: |
+          CURRENT_TASK_DEF=$(aws ecs describe-task-definition --task-definition laventanita-backend --query 'taskDefinition')
+          REGISTRY_REPO=$(echo "$CURRENT_TASK_DEF" | jq -r '.containerDefinitions[0].image' | cut -d: -f1)
+          NEW_IMAGE="${REGISTRY_REPO}:${IMAGE_TAG}"
+
+          NEW_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq --arg IMAGE "$NEW_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE
+             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          NEW_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Obtener subred/security group de la tarea de migracion
+        id: net
+        run: |
+          SUBNETS=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services backend \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.subnets' --output json | jq -c .)
+          SGS=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services backend \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration.securityGroups' --output json | jq -c .)
+          echo "subnets=$SUBNETS" >> "$GITHUB_OUTPUT"
+          echo "sgs=$SGS" >> "$GITHUB_OUTPUT"
+
+      - name: Ejecutar 'php artisan migrate --force' como tarea one-off de ECS
+        id: run-migration
+        run: |
+          NETWORK_CONFIG=$(jq -nc --argjson subnets '${{ steps.net.outputs.subnets }}' --argjson sgs '${{ steps.net.outputs.sgs }}' \
+            '{awsvpcConfiguration:{subnets:$subnets, securityGroups:$sgs, assignPublicIp:"DISABLED"}}')
+
+          OVERRIDES='{"containerOverrides":[{"name":"backend","command":["php","artisan","migrate","--force"]}]}'
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "${{ steps.register-backend.outputs.task_def_arn }}" \
+            --launch-type FARGATE \
+            --network-configuration "$NETWORK_CONFIG" \
+            --overrides "$OVERRIDES" \
+            --query 'tasks[0].taskArn' --output text)
+
+          echo "Esperando a que termine la tarea de migracion: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+
+          echo "Migracion termino con exit code: $EXIT_CODE"
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "::error::La migracion fallo (exit code $EXIT_CODE). Abortando despliegue - los servicios NO se actualizan."
+            aws logs tail /ecs/laventanita-prod/backend --since 5m || true
+            exit 1
+          fi
+
+  deploy:
+    name: Actualizar servicios ECS
+    needs: [build-and-push, migrate]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            container: backend
+          - service: frontend
+            container: frontend
+          - service: nginx
+            container: nginx
+    steps:
+      - name: Configurar credenciales AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Registrar nueva revision y actualizar servicio ${{ matrix.service }}
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+        run: |
+          FAMILY="laventanita-${{ matrix.service }}"
+          CURRENT_TASK_DEF=$(aws ecs describe-task-definition --task-definition "$FAMILY" --query 'taskDefinition')
+          REGISTRY_REPO=$(echo "$CURRENT_TASK_DEF" | jq -r '.containerDefinitions[0].image' | cut -d: -f1)
+          NEW_IMAGE="${REGISTRY_REPO}:${IMAGE_TAG}"
+
+          NEW_TASK_DEF=$(echo "$CURRENT_TASK_DEF" | jq --arg IMAGE "$NEW_IMAGE" \
+            '.containerDefinitions[0].image = $IMAGE
+             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+
+          NEW_ARN=$(aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF" --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "${{ matrix.service }}" \
+            --task-definition "$NEW_ARN" \
+            --force-new-deployment
+
+      - name: Esperar a que el servicio quede estable (rolling deploy sin downtime)
+        run: |
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "${{ matrix.service }}"

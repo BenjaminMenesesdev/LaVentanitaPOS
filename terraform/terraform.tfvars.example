@@ -1,0 +1,15 @@
+# Copia este archivo a terraform.tfvars y ajusta los valores. terraform.tfvars esta en
+# .gitignore (agregado junto con este archivo) - nunca commitear valores reales aqui.
+
+aws_region  = "us-east-1"
+environment = "prod"
+
+# Ajustar tras el primer deploy real / al tener dominio propio.
+frontend_url             = "https://tudominio.cl"
+sanctum_stateful_domains = "tudominio.cl"
+
+# Repositorio de GitHub autorizado a asumir el rol OIDC de despliegue.
+github_repo = "BenjaminMenesesdev/LaVentanitaPOS"
+
+# Alta disponibilidad real (mayor costo) - activar cuando el trafico lo justifique.
+# db_multi_az = true
