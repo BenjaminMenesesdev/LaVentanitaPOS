@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogIn, AlertCircle } from "lucide-react";
+import { LogIn, AlertCircle, IceCreamCone } from "lucide-react";
 import { useAppDispatch } from "../context/AppContext.jsx";
 import { login as loginRequest } from "../services/api.js";
 
@@ -31,10 +31,15 @@ export default function LoginView() {
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
       <div className="w-full max-w-4xl bg-surface rounded-2xl shadow-lg overflow-hidden grid md:grid-cols-2 border border-border">
-        <div className="hidden md:flex flex-col justify-between bg-primary text-white p-8 relative">
-          <div className="absolute inset-0 bg-[url('/local-la-ventanita.jpg')] bg-cover bg-center opacity-25" />
+        <div className="hidden md:flex flex-col justify-between bg-primary text-white p-8 relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 opacity-15">
+            <IceCreamCone size={220} strokeWidth={1.2} />
+          </div>
           <div className="relative z-10">
-            <p className="text-13px font-bold uppercase tracking-wide text-white/80">La Ventanita</p>
+            <div className="flex items-center gap-2 mb-4">
+              <IceCreamCone size={22} strokeWidth={2.2} />
+              <p className="text-13px font-bold uppercase tracking-wide text-white/80">La Ventanita</p>
+            </div>
             <h1 className="text-28px font-bold mt-2 leading-tight">
               Sistema de gestión operativa e inventario
             </h1>
@@ -42,6 +47,7 @@ export default function LoginView() {
           <p className="relative z-10 text-13px text-white/80">
             Ventas, inventario y control financiero en un solo lugar.
           </p>
+          <div className="scallop absolute bottom-0 left-0 right-0" />
         </div>
 
         <div className="p-8 flex flex-col justify-center">

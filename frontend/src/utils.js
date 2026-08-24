@@ -7,6 +7,11 @@ export function formatTime(date) {
   return d.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" });
 }
 
+export function formatDateLong(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  return d.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "short" });
+}
+
 export function formatQty(value, unit) {
   if (unit === "unidades") return Math.round(value).toString();
   return Number(value).toFixed(1);
