@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $adminPassword = Str::password(20);
-        $cajeroPassword = Str::password(20);
+        $operadorPassword = Str::password(20);
 
         $admin = User::create([
             'tenant_id' => $tenant->id,
@@ -43,17 +43,17 @@ class DatabaseSeeder extends Seeder
 
         User::create([
             'tenant_id' => $tenant->id,
-            'name' => 'Cajero Demo',
-            'email' => 'cajero@laventanita.cl',
-            'password' => $cajeroPassword,
-            'role' => 'cajero',
+            'name' => 'Operador Demo',
+            'email' => 'operador@laventanita.cl',
+            'password' => $operadorPassword,
+            'role' => 'operador',
         ]);
 
         if (app()->runningInConsole()) {
             fwrite(STDOUT, "\n==================================================\n");
             fwrite(STDOUT, "CREDENCIALES GENERADAS (copialas ahora, no se vuelven a mostrar):\n");
             fwrite(STDOUT, "  admin@laventanita.cl   / {$adminPassword}\n");
-            fwrite(STDOUT, "  cajero@laventanita.cl  / {$cajeroPassword}\n");
+            fwrite(STDOUT, "  operador@laventanita.cl / {$operadorPassword}\n");
             fwrite(STDOUT, "==================================================\n\n");
         }
 
