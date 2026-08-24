@@ -13,7 +13,20 @@ class User extends Authenticatable
 {
     use BelongsToTenant, HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
+    /**
+     * Defaults en memoria alineados con el default de BD (migracion
+     * create_users_table). Sin esto, User::create() sin 'is_active' explicito
+     * deja el atributo en null en el objeto recien creado (Eloquent no relee
+     * los defaults de columna tras el INSERT), lo que hacia fallar
+     * EnsureUserHasRole::handle() -> !$user->is_active en el mismo
+     * ciclo de request/objeto (p.ej. en tests con actingAs()).
+     */
+    protected $attributes = [
+        'is_active' => true,
+    ];
+
     protected $fillable = [
+        'tenant_id',
         'name',
         'email',
         'password',

@@ -16,8 +16,11 @@ class InventoryAdjustReasonRestrictionTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private User $admin;
+
     private User $operador;
+
     private Ingredient $ingredient;
 
     protected function setUp(): void
@@ -49,12 +52,13 @@ class InventoryAdjustReasonRestrictionTest extends TestCase
         ]);
 
         $this->ingredient = Ingredient::create([
-            'name' => 'Helado Vainilla', 'base_unit' => 'ml',
+            'tenant_id' => $this->tenant->id, 'name' => 'Helado Vainilla', 'base_unit' => 'ml',
             'current_cost_per_base_unit' => 8.5, 'min_stock_threshold' => 100,
         ]);
 
         Stock::create([
-            'ingredient_id' => $this->ingredient->id, 'location' => 'bodega', 'quantity_base_unit' => 5000,
+            'tenant_id' => $this->tenant->id, 'ingredient_id' => $this->ingredient->id,
+            'location' => 'bodega', 'quantity_base_unit' => 5000,
         ]);
     }
 
